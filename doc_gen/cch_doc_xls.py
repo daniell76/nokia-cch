@@ -62,9 +62,9 @@ class CCH_DOC_XLS(object):
         d = self.readRow(wsName, n)
         self.customTable[wsName]['body'].append(d)
       # remove empty lines in the end
-      d = {}
-      for k in self.customTable[wsName]['title']: d[k] = None
-      while self.customTable[wsName]['body'][-1] == d:
+      dz = {}
+      for k in self.customTable[wsName]['title']: dz[k] = None
+      while self.customTable[wsName]['body'][-1] == dz:
         self.customTable[wsName]['body'].pop()
 
 class CCH_PARAM_XLS(CCH_DOC_XLS):

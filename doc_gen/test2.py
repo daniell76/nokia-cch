@@ -8,7 +8,7 @@ docx = CCH_HLD_DOCX()
 #print(json.dumps(docx.contents,indent=4))
 
 #p = docx.document.add_paragraph('This is a test',style=docx.document.styles['Heading 1'])
-
+#print(docx.table)
 docx.buildDocFramework()
 
 docx.document.save('demo.docx')

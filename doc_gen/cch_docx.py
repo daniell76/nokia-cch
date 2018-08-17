@@ -28,7 +28,8 @@ class CCH_DOCX(object):
     self.param = {}
     self.contents = {}
     self.paragraphs = collections.OrderedDict()
-    self.tables = {}
+    self.table = {}
+    self.tables = 0
     self.images = 0
     self.tagre = re.compile('([^<>]*)(<[^<>]*>){0,1}')
   
@@ -50,8 +51,11 @@ class CCH_DOCX(object):
     self.contents = deepcopy(xls.contents)
     try:
       for t in xls.customTable:
-        self.table[t] = deepcopy(xls.customTable[t])
-    except:
+        self.table[t] = {}
+        for k in ['title','body']:
+          self.table[t][k] = deepcopy(xls.customTable[t][k])
+    except Exception as e:
+      print(str(e))
       pass
 
   def applyParam(self, param_name):
@@ -85,13 +89,36 @@ class CCH_DOCX(object):
         
   def parseTables(self):
     for k in self.table:
-      t = []
-      for c in self.table[k]['title']:
-        t.append(self.parseText(c))
-      self.table[k]['title'] = t
+      # Title cannot be parameterised
       for r in self.table[k]['body']:
         for c in r:
           r[c] = self.parseText(r[c])
+  
+  def addTable(self,tableName,caption=None,afterParagraph=None):
+    try:
+      table = self.table[tableName]
+    except:
+      return None
+    rows = len(table['body']) + 1
+    cols = len(table['title'])
+    t = self.document.add_table(rows=rows+1, cols=cols)
+    t.style = 'Table Grid'
+    #CCH_DOCX.set_table_font_size(t,self.fontSize['caption'])
+    if afterParagraph is not None:
+      CCH_DOCX.move_table_after(t,afterParagraph)
+    for c in range(cols):
+      t.rows[0].cells[c].text = table['title'][c]
+    for r,d in enumerate(table['body'],1):
+      for c,k in enumerate(table['title']):
+        if d[k] is not None:
+          t.rows[r].cells[c].text = d[k]
+    self.tables += 1
+    if caption is None:
+      t.rows[rows].cells[0].text = 'Table '+str(self.tables)+'. '+tableName
+    else:
+      t.rows[rows].cells[0].text = 'Table '+str(self.tables)+'. '+caption
+    t.rows[rows].cells[0].merge(t.rows[rows].cells[cols-1])
+    return t
     
   @staticmethod
   def parseTags(tag):
@@ -156,14 +183,12 @@ class CCH_HLD_DOCX(CCH_DOCX):
     super(CCH_HLD_DOCX,self).__init__(templateFile)
     self.loadParameters(paramXls)
     self.loadContents(contentXls)
+    self.parseTables()
     self.filterContents()
     self.paragraphs = collections.OrderedDict([
       ('COVER', collections.OrderedDict([('TITLE', None), ('VERSION', None)])),
       ('HISTORY', collections.OrderedDict([('TITLE', None)])),
       ('TOC', collections.OrderedDict([('TITLE', None), ('CONTENT', self.document.paragraphs[0])]))
-    ])
-    self.tables = collections.OrderedDict([
-      ('HISTORY', None)
     ])
     
   def filterContents(self):
@@ -245,27 +270,11 @@ class CCH_HLD_DOCX(CCH_DOCX):
     
     # Document History
     p = pCursor.insert_paragraph_before('Document History',style=self.document.styles['Subtitle'])
-    t = self.document.add_table(rows=1, cols=4)
-    t.style = 'Table Grid'
-    #CCH_DOCX.set_table_font_size(t,self.fontSize['caption'])
-    CCH_DOCX.move_table_after(t,p)
-    hdr_cells = t.rows[0].cells
-    hdr_cells[0].text = 'Version'
-    hdr_cells[1].text = 'Revision Description'
-    hdr_cells[2].text = 'Revision Responsible'
-    hdr_cells[3].text = 'Revision Date'
-    row_cells = t.add_row().cells
-    row_cells[0].text = self.param['Generic']['DocumentVersion']
-    row_cells[1].text = ''
-    row_cells[2].text = self.param['Generic']['DocumentAuthor']
-    row_cells[3].text = self.param['Generic']['DocumentDate']
-    self.paragraphs['HISTORY']['TITLE'] = p
-    self.tables['HISTORY'] = t
+    self.addTable('Table-HISTORY', 'Document History', p)
     p = pCursor.insert_paragraph_before()
     r = p.add_run()
     r.add_break(WD_BREAK.PAGE)
-    
-    
+
     # TOC
     p = pCursor.insert_paragraph_before('Table Of Content',style=self.document.styles['Subtitle'])
     self.paragraphs['TOC']['TITLE'] = p
@@ -311,7 +320,7 @@ class CCH_HLD_DOCX(CCH_DOCX):
               caption = 'Figure '+str(self.images)+'. '+tag['comment']
             CCH_DOCX.add_image(imageName,caption,r,Inches(5.6))
           elif tag['type'] == 'table':
-            pass
+            self.addTable('Table-'+tag['tagName'], tag['comment'], p)
           else:
             p.add_run(token)
         self.paragraphs[k]['CONTENT'].append(p)
