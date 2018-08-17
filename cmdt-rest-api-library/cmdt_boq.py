@@ -21,7 +21,7 @@ except:
   print('\t\tdefault: the folder name of "-dir" parameter')
   print('\t-margin: The margin of dimension results in percentage.')
   print('\t\tThe value should be in the range of (0,100].')
-  print('\t\tE.g. 85 means the 85% of dimension results will fullfill the VNF requirement.')
+  print('\t\tE.g. 91 means the 91% of dimension results will fullfill the VNF requirement.')
   print('\t\tdefault: 100')
   print('\t-cmdtServer, -cmdtUser, -cmdtPassword: login credential of CMDT Server.')
   print('\t\tdefault: cmdtServer="10.6.138.20", cmdtUsername="automation", cmdtPassword="automation"')
